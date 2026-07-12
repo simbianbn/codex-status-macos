@@ -8,7 +8,7 @@ public struct CodexStatusRepository: Sendable {
     public init(
         sessionsRoot: URL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".codex/sessions", isDirectory: true),
-        maximumFiles: Int = 24,
+        maximumFiles: Int = 12,
         parser: CodexSessionParser = CodexSessionParser()
     ) {
         self.sessionsRoot = sessionsRoot
@@ -25,8 +25,7 @@ public struct CodexStatusRepository: Sendable {
         var selectedQuota: (value: QuotaSnapshot, source: String)?
         var selectedActivity = TaskActivity()
         for file in files {
-            guard let contents = try? String(contentsOf: file.url, encoding: .utf8) else { continue }
-            let lines = contents.split(whereSeparator: \.isNewline).map(String.init)
+            guard let lines = recentLines(from: file.url) else { continue }
             let snapshot = parser.parse(lines: lines, now: now)
             if let quota = snapshot.quota,
                selectedQuota == nil || quota.observedAt >= selectedQuota!.value.observedAt {
@@ -47,6 +46,25 @@ public struct CodexStatusRepository: Sendable {
             errorMessage: selectedQuota == nil ? "ไม่พบข้อมูลโควตา Codex ที่ตรวจสอบได้" : nil,
             isStale: stale
         )
+    }
+
+    private func recentLines(from url: URL, maximumBytes: UInt64 = 1_048_576) -> [String]? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let end = try? handle.seekToEnd() else { return nil }
+        let offset = end > maximumBytes ? end - maximumBytes : 0
+        do {
+            try handle.seek(toOffset: offset)
+            let data = try handle.readToEnd() ?? Data()
+            guard let contents = String(data: data, encoding: .utf8) else { return nil }
+            var lines = contents.split(whereSeparator: \.isNewline).map(String.init)
+            if offset > 0, !lines.isEmpty {
+                lines.removeFirst()
+            }
+            return lines
+        } catch {
+            return nil
+        }
     }
 
     private func newestSessionFiles() -> [(url: URL, modifiedAt: Date)] {

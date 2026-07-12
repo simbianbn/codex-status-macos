@@ -15,6 +15,10 @@ enum CodexStatusTests {
         tests.expect(constrainedResult.quota?.limitName == "Codex", "preserves limit name")
         tests.expect(constrainedResult.quota?.windows.count == 2, "preserves both windows")
 
+        let fractionalTimestamp = #"{"timestamp":"2026-07-12T15:24:38.128Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":27,"window_minutes":300,"resets_at":1783881724},"secondary":{"used_percent":30,"window_minutes":10080,"resets_at":1784354599}}}}"#
+        let fractionalResult = parser.parse(lines: [fractionalTimestamp], now: now)
+        tests.expect(fractionalResult.quota?.remainingPercent == 70, "parses Codex timestamps with fractional seconds")
+
         let older = quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 70)
         let newer = quotaLine(timestamp: "2026-07-12T10:01:00Z", primaryUsed: 20)
         tests.expect(parser.parse(lines: [older, newer], now: now).quota?.remainingPercent == 80, "latest quota event wins")

@@ -69,7 +69,9 @@ public struct CodexAccountProvider: Sendable {
     }
 
     private static func parseDate(_ value: String) -> Date? {
-        ISO8601DateFormatter().date(from: value)
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 }
 
