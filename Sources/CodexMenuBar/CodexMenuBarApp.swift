@@ -71,9 +71,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 @MainActor
 private enum StatusCapsuleImage {
     static func make(snapshot: CodexSnapshot, preferences: PreferenceValues) -> NSImage {
-        let text = StatusPresentation.compactText(
+        let text = StatusPresentation.menuBarQuotaText(
             mode: preferences.displayMode,
-            remainingPercent: snapshot.quota?.remainingPercent
+            windows: snapshot.quota?.windows ?? []
         )
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 12, weight: .semibold),

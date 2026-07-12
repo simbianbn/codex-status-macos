@@ -36,7 +36,8 @@ final class MenuBarOverlayController {
         button.image = image
         button.setAccessibilityLabel(accessibilityLabel)
         let width = image.size.width + 6
-        let height = NSStatusBar.system.thickness
+        let screen = NSScreen.screens.first
+        let height = max(NSStatusBar.system.thickness, screen?.safeAreaInsets.top ?? 0)
         panel.setFrame(frame(width: width, height: height), display: true)
         button.frame = NSRect(origin: .zero, size: NSSize(width: width, height: height))
         panel.orderFrontRegardless()

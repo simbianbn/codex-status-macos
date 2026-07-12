@@ -57,6 +57,16 @@ enum CodexStatusTests {
         tests.expect(StatusPresentation.compactText(mode: .iconAndPercentage, remainingPercent: 72) == "C 72%", "icon and percentage mode")
         tests.expect(StatusPresentation.compactText(mode: .percentageOnly, remainingPercent: 72) == "72%", "percentage only mode")
         tests.expect(StatusPresentation.compactText(mode: .iconOnly, remainingPercent: 72) == "C", "icon only mode")
+        let fiveHourWindow = QuotaWindow(name: "5 ชั่วโมง", remainingPercent: 73, windowMinutes: 300, resetsAt: nil)
+        let weeklyWindow = QuotaWindow(name: "7 วัน", remainingPercent: 70, windowMinutes: 10_080, resetsAt: nil)
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [fiveHourWindow, weeklyWindow]) == "5H 73% · 7D 70%",
+            "menu bar shows five-hour and weekly quota"
+        )
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .percentageOnly, windows: [fiveHourWindow, weeklyWindow]) == "73% · 70%",
+            "percentage-only mode keeps both quota windows"
+        )
 
         let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
         tests.expect(started.activity.state == .working, "task_started is working")
