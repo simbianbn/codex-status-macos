@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="${0:A:h:h}"
 APP="$ROOT/dist/Codex Status.app"
 
-open -n "$APP"
+open "$APP"
 pid=""
 for _ in {1..20}; do
     pid=$(pgrep -f "$APP/Contents/MacOS/CodexMenuBar" | head -1 || true)
@@ -20,6 +20,12 @@ fi
 sleep 2
 if ! kill -0 "$pid" 2>/dev/null; then
     echo "FAIL: app exited during launch"
+    exit 1
+fi
+
+count=$(pgrep -f "$APP/Contents/MacOS/CodexMenuBar" | wc -l | tr -d ' ')
+if [[ "$count" != "1" ]]; then
+    echo "FAIL: expected 1 app instance, found $count"
     exit 1
 fi
 

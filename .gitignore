@@ -1,4 +1,5 @@
 .worktrees/
 dist/
 .build/
-
+.DS_Store
+assets/AppIcon.iconset/
