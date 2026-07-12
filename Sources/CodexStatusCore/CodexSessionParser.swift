@@ -6,16 +6,24 @@ public struct CodexSessionParser: Sendable {
     public func parse(lines: [String], now: Date) -> CodexSnapshot {
         let decoder = JSONDecoder()
         var newestQuota: (date: Date, value: QuotaSnapshot)?
+        var newestActivity: TaskActivity?
 
         for line in lines {
             guard
                 let data = line.data(using: .utf8),
                 let envelope = try? decoder.decode(EventEnvelope.self, from: data),
                 envelope.type == "event_msg",
-                envelope.payload.type == "token_count",
-                let limits = envelope.payload.rateLimits,
                 let observedAt = Self.parseDate(envelope.timestamp)
             else { continue }
+
+            if let state = Self.activityState(for: envelope.payload.type),
+               newestActivity?.observedAt == nil || observedAt >= newestActivity!.observedAt! {
+                newestActivity = TaskActivity(state: state, observedAt: observedAt)
+            }
+
+            guard envelope.payload.type == "token_count", let limits = envelope.payload.rateLimits else {
+                continue
+            }
 
             let windows = [
                 Self.makeWindow(name: "5 ชั่วโมง", value: limits.primary),
@@ -29,11 +37,17 @@ public struct CodexSessionParser: Sendable {
             }
         }
 
+        let activity = newestActivity ?? TaskActivity()
         guard let quota = newestQuota?.value else {
-            return .unavailable(now: now, message: "ไม่พบข้อมูลโควตา Codex ที่ตรวจสอบได้")
+            return CodexSnapshot(
+                quota: nil,
+                activity: activity,
+                loadedAt: now,
+                errorMessage: "ไม่พบข้อมูลโควตา Codex ที่ตรวจสอบได้"
+            )
         }
 
-        return CodexSnapshot(quota: quota, loadedAt: now)
+        return CodexSnapshot(quota: quota, activity: activity, loadedAt: now)
     }
 
     private static func makeWindow(name: String, value: LimitWindow?) -> QuotaWindow? {
@@ -51,6 +65,15 @@ public struct CodexSessionParser: Sendable {
     private static func parseDate(_ value: String?) -> Date? {
         guard let value else { return nil }
         return ISO8601DateFormatter().date(from: value)
+    }
+
+    private static func activityState(for event: String?) -> ActivityState? {
+        switch event {
+        case "task_started": .working
+        case "task_complete": .completed
+        case "task_failed", "turn_aborted", "error": .failed
+        default: nil
+        }
     }
 }
 

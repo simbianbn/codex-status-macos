@@ -3,7 +3,7 @@ import CodexStatusCore
 
 @main
 enum CodexStatusTests {
-    static func main() {
+    static func main() async {
         var tests = TestSuite()
         let now = Date(timeIntervalSince1970: 1_783_850_000)
         let parser = CodexSessionParser()
@@ -31,11 +31,51 @@ enum CodexStatusTests {
         tests.expect(QuotaTone.forRemaining(51) == .healthy, "51 is healthy")
         tests.expect(QuotaTone.forRemaining(nil) == .unknown, "nil is unknown")
 
+        let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
+        tests.expect(started.activity.state == .working, "task_started is working")
+
+        let completed = parser.parse(lines: [
+            event("task_started", at: "2026-07-12T10:00:00Z"),
+            event("task_complete", at: "2026-07-12T10:01:00Z")
+        ], now: now)
+        tests.expect(completed.activity.state == .completed, "task_complete is completed")
+
+        let failed = parser.parse(lines: [
+            event("task_started", at: "2026-07-12T10:00:00Z"),
+            event("turn_aborted", at: "2026-07-12T10:01:00Z")
+        ], now: now)
+        tests.expect(failed.activity.state == .failed, "turn_aborted is failed")
+
+        do {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            let day = root.appendingPathComponent("2026/07/12")
+            try FileManager.default.createDirectory(at: day, withIntermediateDirectories: true)
+            let olderFile = day.appendingPathComponent("older.jsonl")
+            let newerFile = day.appendingPathComponent("newer.jsonl")
+            try quotaLine(timestamp: "2026-07-12T09:00:00Z", primaryUsed: 80).write(to: olderFile, atomically: true, encoding: .utf8)
+            try quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 30).write(to: newerFile, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 100)], ofItemAtPath: olderFile.path)
+            try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 200)], ofItemAtPath: newerFile.path)
+            let repository = CodexStatusRepository(sessionsRoot: root)
+            let snapshot = await repository.loadSnapshot(now: now)
+            tests.expect(snapshot.quota?.remainingPercent == 70, "repository reads newest session metadata")
+            let expectedSource = newerFile.resolvingSymlinksInPath().path
+            let actualSource = snapshot.sourcePath.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+            tests.expect(actualSource == expectedSource, "repository records selected source path")
+            try? FileManager.default.removeItem(at: root)
+        } catch {
+            tests.expect(false, "repository fixture setup: \(error)")
+        }
+
         tests.finish()
     }
 
     private static func quotaLine(timestamp: String, primaryUsed: Double) -> String {
         #"{"timestamp":"\#(timestamp)","type":"event_msg","payload":{"type":"token_count","rate_limits":{"limit_name":"Codex","primary":{"used_percent":\#(primaryUsed),"window_minutes":300,"resets_at":1783854000}}}}"#
+    }
+
+    private static func event(_ type: String, at timestamp: String) -> String {
+        #"{"timestamp":"\#(timestamp)","type":"event_msg","payload":{"type":"\#(type)"}}"#
     }
 }
 
