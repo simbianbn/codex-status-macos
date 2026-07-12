@@ -30,6 +30,12 @@ enum CodexStatusTests {
         tests.expect(QuotaTone.forRemaining(50) == .warning, "50 is warning")
         tests.expect(QuotaTone.forRemaining(51) == .healthy, "51 is healthy")
         tests.expect(QuotaTone.forRemaining(nil) == .unknown, "nil is unknown")
+        tests.expect(StatusPresentation.capsuleText(remainingPercent: nil) == "Codex —", "unknown quota uses dash")
+        tests.expect(StatusPresentation.capsuleText(remainingPercent: 72.4) == "Codex 72%", "capsule rounds quota")
+        tests.expect(StatusPresentation.activityLabel(.idle) == "ว่าง", "idle Thai label")
+        tests.expect(StatusPresentation.activityLabel(.working) == "กำลังทำงาน", "working Thai label")
+        tests.expect(StatusPresentation.activityLabel(.completed) == "เสร็จ", "completed Thai label")
+        tests.expect(StatusPresentation.activityLabel(.failed) == "เกิดข้อผิดพลาด", "failed Thai label")
 
         let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
         tests.expect(started.activity.state == .working, "task_started is working")

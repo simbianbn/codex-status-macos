@@ -4,7 +4,7 @@
 
 **Goal:** Build a native macOS Menu Bar app that displays verified local Codex quota and current task activity in a compact colored capsule and detail popover.
 
-**Architecture:** A SwiftPM executable owns the SwiftUI `MenuBarExtra`. A reusable `CodexStatusCore` library parses only rate-limit and task-event metadata from local Codex JSONL session files, while a `StatusStore` periodically selects the newest records and supplies immutable view state to the UI.
+**Architecture:** A SwiftPM executable owns an AppKit `NSStatusItem` and `NSPopover` with SwiftUI content; AppKit keeps the process alive when macOS 26 temporarily hides status items. A reusable `CodexStatusCore` library parses only rate-limit and task-event metadata from local Codex JSONL session files, while a `StatusStore` periodically selects the newest records and supplies immutable view state to the UI.
 
 **Tech Stack:** Swift 6, SwiftUI, Foundation, Swift Package Manager, XCTest
 
@@ -159,15 +159,12 @@ Expected: compilation fails because `StatusPresentation` is missing.
 
 - [ ] **Step 3: Implement presentation helpers and SwiftUI app**
 
-Add `StatusPresentation`, an `@MainActor StatusStore` that refreshes immediately and every 30 seconds, a capsule label with quota tone and activity dot, and a popover containing both quota windows, reset time, latest activity, stale/error messaging, refresh, and quit controls. Use system adaptive colors and accessibility labels.
+Add `StatusPresentation`, an `@MainActor StatusStore` that refreshes immediately and every 30 seconds, an `NSStatusItem` capsule with quota tone and activity dot, and an `NSPopover` containing both quota windows, reset time, latest activity, stale/error messaging, refresh, and quit controls. Use system adaptive colors and accessibility labels.
 
 ```swift
-MenuBarExtra {
-    StatusPopover(store: store)
-} label: {
-    MenuBarLabel(snapshot: store.snapshot)
-}
-.menuBarExtraStyle(.window)
+let item = NSStatusBar.system.statusItem(withLength: 104)
+item.isVisible = true
+popover.contentViewController = NSHostingController(rootView: StatusPopover(store: store))
 ```
 
 - [ ] **Step 4: Add reproducible app-bundle build script and README**
@@ -185,4 +182,3 @@ Expected: tests pass, debug/release builds succeed, and the app executable exist
 git add Sources/CodexMenuBar Sources/CodexStatusCore Tests scripts README.md Package.swift
 git commit -m "feat: add Codex quota menu bar app"
 ```
-

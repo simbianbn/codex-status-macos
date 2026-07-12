@@ -6,10 +6,12 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "CodexStatusCore", targets: ["CodexStatusCore"]),
+        .executable(name: "CodexMenuBar", targets: ["CodexMenuBar"]),
         .executable(name: "CodexStatusTests", targets: ["CodexStatusTests"])
     ],
     targets: [
         .target(name: "CodexStatusCore"),
+        .executableTarget(name: "CodexMenuBar", dependencies: ["CodexStatusCore"]),
         .executableTarget(
             name: "CodexStatusTests",
             dependencies: ["CodexStatusCore"],
