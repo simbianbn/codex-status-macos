@@ -37,6 +37,15 @@ enum CodexStatusTests {
         tests.expect(StatusPresentation.activityLabel(.completed) == "เสร็จ", "completed Thai label")
         tests.expect(StatusPresentation.activityLabel(.failed) == "เกิดข้อผิดพลาด", "failed Thai label")
 
+        let accountProvider = CodexAccountProvider(authFile: URL(fileURLWithPath: "/tmp/unused-auth.json"))
+        let signedInAccount = accountProvider.parse(#"{"auth_mode":"chatgpt","last_refresh":"2026-07-12T10:00:00Z","tokens":{"access_token":"SECRET_VALUE"}}"#)
+        tests.expect(signedInAccount.state == .signedIn, "detects ChatGPT account")
+        tests.expect(signedInAccount.authMode == "chatgpt", "keeps safe auth mode")
+        tests.expect(!String(describing: signedInAccount).contains("SECRET_VALUE"), "never exposes credential values")
+        tests.expect(accountProvider.parse("{}").state == .signedOut, "empty auth is signed out")
+        tests.expect(accountProvider.parse("not-json").state == .unavailable, "malformed auth is unavailable")
+        tests.expect(CodexAccountProvider.loginArguments == ["login"], "uses official Codex login flow")
+
         let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
         tests.expect(started.activity.state == .working, "task_started is working")
 
