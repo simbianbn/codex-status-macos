@@ -13,6 +13,7 @@ final class StatusStore: ObservableObject {
     private let repository: CodexStatusRepository
     private var refreshTask: Task<Void, Never>?
     private var started = false
+    private(set) var refreshInterval: TimeInterval = 30
 
     init(repository: CodexStatusRepository = CodexStatusRepository()) {
         self.repository = repository
@@ -24,11 +25,15 @@ final class StatusStore: ObservableObject {
         refresh()
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(self?.refreshInterval ?? 30))
                 guard !Task.isCancelled else { return }
                 self?.refresh()
             }
         }
+    }
+
+    func updateRefreshInterval(_ interval: TimeInterval) {
+        refreshInterval = [15, 30, 60].contains(interval) ? interval : 30
     }
 
     func refresh() {

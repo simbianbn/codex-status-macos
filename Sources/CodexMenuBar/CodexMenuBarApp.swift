@@ -19,12 +19,16 @@ enum CodexMenuBarMain {
 @MainActor
 private final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = StatusStore()
+    private let settings = SettingsModel()
     private let popover = NSPopover()
     private var statusItem: NSStatusItem?
     private var snapshotCancellable: AnyCancellable?
+    private lazy var settingsWindow = SettingsWindowController(model: settings) { [weak store] in
+        store?.refresh()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let item = NSStatusBar.system.statusItem(withLength: 104)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = "CodexStatusCapsule"
         item.isVisible = true
         guard let button = item.button else { return }
@@ -37,11 +41,19 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 330, height: 430)
-        popover.contentViewController = NSHostingController(rootView: StatusPopover(store: store))
+        popover.contentViewController = NSHostingController(rootView: StatusPopover(
+            store: store,
+            settings: settings,
+            openSettings: { [weak self] in
+                self?.popover.performClose(nil)
+                self?.settingsWindow.show()
+            }
+        ))
 
         statusItem = item
-        snapshotCancellable = store.$snapshot.sink { [weak button] snapshot in
-            button?.image = StatusCapsuleImage.make(snapshot: snapshot)
+        snapshotCancellable = Publishers.CombineLatest(store.$snapshot, settings.$preferences).sink { [weak button, weak store] snapshot, preferences in
+            store?.updateRefreshInterval(preferences.refreshInterval)
+            button?.image = StatusCapsuleImage.make(snapshot: snapshot, preferences: preferences)
             button?.setAccessibilityLabel(
                 "\(StatusPresentation.capsuleText(remainingPercent: snapshot.quota?.remainingPercent)), \(StatusPresentation.activityLabel(snapshot.activity.state))"
             )
@@ -65,24 +77,28 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
 @MainActor
 private enum StatusCapsuleImage {
-    static func make(snapshot: CodexSnapshot) -> NSImage {
-        let size = NSSize(width: 100, height: 22)
+    static func make(snapshot: CodexSnapshot, preferences: PreferenceValues) -> NSImage {
+        let text = StatusPresentation.compactText(
+            mode: preferences.displayMode,
+            remainingPercent: snapshot.quota?.remainingPercent
+        )
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
+            .foregroundColor: textColor(snapshot: snapshot, preferences: preferences)
+        ]
+        let textSize = text.size(withAttributes: attributes)
+        let activitySpace: CGFloat = preferences.showActivity ? 17 : 8
+        let size = NSSize(width: max(30, textSize.width + activitySpace + 8), height: 22)
         let image = NSImage(size: size, flipped: false) { rect in
-            let tone = snapshot.quota?.tone ?? .unknown
-            capsuleColor(tone).setFill()
+            capsuleColor(snapshot: snapshot, preferences: preferences).setFill()
             NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 2), xRadius: 9, yRadius: 9).fill()
 
-            activityColor(snapshot.activity.state).setFill()
-            NSBezierPath(ovalIn: NSRect(x: 9, y: 8, width: 7, height: 7)).fill()
-
-            let text = StatusPresentation.capsuleText(remainingPercent: snapshot.quota?.remainingPercent)
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
-                .foregroundColor: tone == .warning ? NSColor.black.withAlphaComponent(0.82) : NSColor.white
-            ]
-            let textSize = text.size(withAttributes: attributes)
+            if preferences.showActivity {
+                activityColor(snapshot.activity.state).setFill()
+                NSBezierPath(ovalIn: NSRect(x: 8, y: 8, width: 7, height: 7)).fill()
+            }
             text.draw(
-                at: NSPoint(x: 21, y: (size.height - textSize.height) / 2),
+                at: NSPoint(x: activitySpace, y: (size.height - textSize.height) / 2),
                 withAttributes: attributes
             )
             return true
@@ -91,13 +107,28 @@ private enum StatusCapsuleImage {
         return image
     }
 
-    private static func capsuleColor(_ tone: QuotaTone) -> NSColor {
-        switch tone {
+    private static func capsuleColor(snapshot: CodexSnapshot, preferences: PreferenceValues) -> NSColor {
+        guard preferences.useQuotaColors else { return NSColor.controlAccentColor.withAlphaComponent(0.85) }
+        let tone = tone(snapshot: snapshot, preferences: preferences)
+        return switch tone {
         case .healthy: NSColor(red: 0.12, green: 0.68, blue: 0.36, alpha: 1)
         case .warning: NSColor(red: 0.95, green: 0.67, blue: 0.12, alpha: 1)
         case .critical: NSColor(red: 0.87, green: 0.22, blue: 0.22, alpha: 1)
         case .unknown: NSColor.secondaryLabelColor.withAlphaComponent(0.5)
         }
+    }
+
+    private static func textColor(snapshot: CodexSnapshot, preferences: PreferenceValues) -> NSColor {
+        tone(snapshot: snapshot, preferences: preferences) == .warning
+            ? NSColor.black.withAlphaComponent(0.82)
+            : NSColor.white
+    }
+
+    private static func tone(snapshot: CodexSnapshot, preferences: PreferenceValues) -> QuotaTone {
+        guard let remaining = snapshot.quota?.remainingPercent else { return .unknown }
+        if remaining < preferences.criticalThreshold { return .critical }
+        if remaining <= 50 { return .warning }
+        return .healthy
     }
 
     private static func activityColor(_ state: ActivityState) -> NSColor {

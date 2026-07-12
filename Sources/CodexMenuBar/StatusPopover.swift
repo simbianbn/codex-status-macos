@@ -4,6 +4,8 @@ import SwiftUI
 
 struct StatusPopover: View {
     @ObservedObject var store: StatusStore
+    @ObservedObject var settings: SettingsModel
+    let openSettings: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -12,6 +14,7 @@ struct StatusPopover: View {
             quotaSection
             Divider()
             activitySection
+            accountSection
             if let message = store.snapshot.errorMessage {
                 errorBanner(message)
             } else if store.snapshot.isStale {
@@ -121,6 +124,25 @@ struct StatusPopover: View {
             }
             .disabled(store.isRefreshing)
             Button("ออก") { NSApplication.shared.terminate(nil) }
+            Button {
+                openSettings()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .help("เปิดการตั้งค่า")
+        }
+    }
+
+    private var accountSection: some View {
+        HStack {
+            Label(
+                settings.account.state == .signedIn ? "เข้าสู่ระบบ Codex แล้ว" : "ยังไม่ได้เข้าสู่ระบบ Codex",
+                systemImage: settings.account.state == .signedIn ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark"
+            )
+            .font(.caption)
+            Spacer()
+            Button("ตั้งค่า") { openSettings() }
+                .buttonStyle(.link)
         }
     }
 
