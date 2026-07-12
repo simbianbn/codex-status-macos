@@ -14,4 +14,13 @@ public enum StatusPresentation {
         case .failed: "เกิดข้อผิดพลาด"
         }
     }
+
+    public static func compactText(mode: MenuDisplayMode, remainingPercent: Double?) -> String {
+        let percentage = remainingPercent.map { "\(Int($0.rounded()))%" } ?? "—"
+        switch mode {
+        case .iconAndPercentage: return "C \(percentage)"
+        case .percentageOnly: return percentage
+        case .iconOnly: return "C"
+        }
+    }
 }

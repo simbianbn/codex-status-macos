@@ -46,6 +46,14 @@ enum CodexStatusTests {
         tests.expect(accountProvider.parse("not-json").state == .unavailable, "malformed auth is unavailable")
         tests.expect(CodexAccountProvider.loginArguments == ["login"], "uses official Codex login flow")
 
+        tests.expect(PreferenceValues().displayMode == .iconAndPercentage, "default display mode")
+        tests.expect(PreferenceValues(criticalThreshold: 99).criticalThreshold == 40, "clamps high critical threshold")
+        tests.expect(PreferenceValues(criticalThreshold: 1).criticalThreshold == 5, "clamps low critical threshold")
+        tests.expect(PreferenceValues(refreshInterval: 17).refreshInterval == 30, "invalid refresh interval uses default")
+        tests.expect(StatusPresentation.compactText(mode: .iconAndPercentage, remainingPercent: 72) == "C 72%", "icon and percentage mode")
+        tests.expect(StatusPresentation.compactText(mode: .percentageOnly, remainingPercent: 72) == "72%", "percentage only mode")
+        tests.expect(StatusPresentation.compactText(mode: .iconOnly, remainingPercent: 72) == "C", "icon only mode")
+
         let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
         tests.expect(started.activity.state == .working, "task_started is working")
 
