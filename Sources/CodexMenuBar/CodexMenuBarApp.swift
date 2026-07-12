@@ -21,23 +21,16 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = StatusStore()
     private let settings = SettingsModel()
     private let popover = NSPopover()
-    private var statusItem: NSStatusItem?
     private var snapshotCancellable: AnyCancellable?
+    private lazy var menuBarOverlay = MenuBarOverlayController(
+        target: self,
+        action: #selector(togglePopover(_:))
+    )
     private lazy var settingsWindow = SettingsWindowController(model: settings) { [weak store] in
         store?.refresh()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.autosaveName = "CodexStatusCapsule"
-        item.isVisible = true
-        guard let button = item.button else { return }
-        button.imagePosition = .imageOnly
-        button.imageScaling = .scaleNone
-        button.target = self
-        button.action = #selector(togglePopover(_:))
-        button.sendAction(on: [.leftMouseUp])
-
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 330, height: 430)
@@ -50,18 +43,18 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         ))
 
-        statusItem = item
-        snapshotCancellable = Publishers.CombineLatest(store.$snapshot, settings.$preferences).sink { [weak button, weak store] snapshot, preferences in
+        snapshotCancellable = Publishers.CombineLatest(store.$snapshot, settings.$preferences).sink { [weak self, weak store] snapshot, preferences in
+            guard let self else { return }
             store?.updateRefreshInterval(preferences.refreshInterval)
-            button?.image = StatusCapsuleImage.make(snapshot: snapshot, preferences: preferences)
-            button?.setAccessibilityLabel(
-                "\(StatusPresentation.capsuleText(remainingPercent: snapshot.quota?.remainingPercent)), \(StatusPresentation.activityLabel(snapshot.activity.state))"
+            menuBarOverlay.update(
+                image: StatusCapsuleImage.make(snapshot: snapshot, preferences: preferences),
+                accessibilityLabel: "\(StatusPresentation.capsuleText(remainingPercent: snapshot.quota?.remainingPercent)), \(StatusPresentation.activityLabel(snapshot.activity.state))"
             )
         }
         store.start()
     }
 
-    @objc private func togglePopover(_ sender: NSStatusBarButton) {
+    @objc private func togglePopover(_ sender: NSButton) {
         if popover.isShown {
             popover.performClose(sender)
         } else {
