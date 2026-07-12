@@ -26,8 +26,8 @@ public struct CodexSessionParser: Sendable {
             }
 
             let windows = [
-                Self.makeWindow(name: "5 ชั่วโมง", value: limits.primary),
-                Self.makeWindow(name: "7 วัน", value: limits.secondary)
+                Self.makeWindow(name: "5 hours", value: limits.primary),
+                Self.makeWindow(name: "7 days", value: limits.secondary)
             ].compactMap { $0 }
 
             guard !windows.isEmpty else { continue }
@@ -43,7 +43,7 @@ public struct CodexSessionParser: Sendable {
                 quota: nil,
                 activity: activity,
                 loadedAt: now,
-                errorMessage: "ไม่พบข้อมูลโควตา Codex ที่ตรวจสอบได้"
+                errorMessage: "No verified Codex quota data was found."
             )
         }
 

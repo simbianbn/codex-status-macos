@@ -34,10 +34,10 @@ public struct CodexAccountProvider: Sendable {
 
     public func loadStatus() -> AccountSnapshot {
         guard FileManager.default.fileExists(atPath: authFile.path) else {
-            return AccountSnapshot(state: .signedOut, message: "ยังไม่พบข้อมูลการเข้าสู่ระบบ Codex")
+            return AccountSnapshot(state: .signedOut, message: "No Codex sign-in data was found.")
         }
         guard let contents = try? String(contentsOf: authFile, encoding: .utf8) else {
-            return AccountSnapshot(state: .unavailable, message: "ไม่สามารถอ่านสถานะบัญชี Codex ได้")
+            return AccountSnapshot(state: .unavailable, message: "Codex account status could not be read.")
         }
         return parse(contents)
     }
@@ -45,10 +45,10 @@ public struct CodexAccountProvider: Sendable {
     public func parse(_ contents: String) -> AccountSnapshot {
         guard let data = contents.data(using: .utf8),
               let metadata = try? JSONDecoder().decode(SafeAuthMetadata.self, from: data) else {
-            return AccountSnapshot(state: .unavailable, message: "รูปแบบข้อมูลบัญชี Codex ไม่รองรับ")
+            return AccountSnapshot(state: .unavailable, message: "The Codex account data format is not supported.")
         }
         guard let authMode = metadata.authMode, !authMode.isEmpty else {
-            return AccountSnapshot(state: .signedOut, message: "ยังไม่ได้เข้าสู่ระบบ Codex")
+            return AccountSnapshot(state: .signedOut, message: "Not signed in to Codex.")
         }
         return AccountSnapshot(
             state: .signedIn,

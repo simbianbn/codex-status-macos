@@ -36,7 +36,7 @@ final class SettingsModel: ObservableObject {
     func startLogin() {
         guard loginProcess?.isRunning != true else { return }
         guard let executable = accountProvider.resolvedExecutable() else {
-            loginError = "ไม่พบ Codex CLI ในเครื่อง กรุณาเปิด Codex และอัปเดตเป็นเวอร์ชันล่าสุด"
+            loginError = "Codex CLI was not found. Open Codex and update to the latest version."
             return
         }
 
@@ -54,7 +54,7 @@ final class SettingsModel: ObservableObject {
             loginError = nil
             startPollingAccount()
         } catch {
-            loginError = "ไม่สามารถเริ่มการเข้าสู่ระบบ Codex ได้"
+            loginError = "Unable to start Codex sign-in."
         }
     }
 
@@ -73,7 +73,7 @@ final class SettingsModel: ObservableObject {
             preferences.launchAtLogin = enabled
             launchAtLoginError = nil
         } catch {
-            launchAtLoginError = "ไม่สามารถเปลี่ยนการเปิดพร้อมระบบได้ในขณะนี้"
+            launchAtLoginError = "Launch at login could not be changed."
             preferences.launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }

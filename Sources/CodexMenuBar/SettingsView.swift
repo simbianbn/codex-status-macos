@@ -8,11 +8,11 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             accountView
-                .tabItem { Label("บัญชี", systemImage: "person.crop.circle") }
+                .tabItem { Label("Account", systemImage: "person.crop.circle") }
             displayView
-                .tabItem { Label("การแสดงผล", systemImage: "menubar.rectangle") }
+                .tabItem { Label("Display", systemImage: "menubar.rectangle") }
             generalView
-                .tabItem { Label("ทั่วไป", systemImage: "gearshape") }
+                .tabItem { Label("General", systemImage: "gearshape") }
         }
         .padding(20)
         .frame(width: 520, height: 390)
@@ -20,30 +20,30 @@ struct SettingsView: View {
 
     private var accountView: some View {
         Form {
-            Section("บัญชี Codex") {
-                LabeledContent("สถานะ") {
+            Section("Codex Account") {
+                LabeledContent("Status") {
                     Label(accountLabel, systemImage: accountIcon)
                         .foregroundStyle(accountColor)
                 }
                 if let mode = model.account.authMode {
-                    LabeledContent("วิธีเข้าสู่ระบบ", value: mode == "chatgpt" ? "บัญชี ChatGPT" : mode)
+                    LabeledContent("Sign-in method", value: mode == "chatgpt" ? "ChatGPT account" : mode)
                 }
                 if let refreshed = model.account.lastRefresh {
-                    LabeledContent("ตรวจสอบล่าสุด", value: refreshed.formatted(date: .abbreviated, time: .shortened))
+                    LabeledContent("Last checked", value: refreshed.formatted(date: .abbreviated, time: .shortened))
                 }
                 HStack {
-                    Button("เข้าสู่ระบบด้วย Codex") { model.startLogin() }
+                    Button("Sign in with Codex") { model.startLogin() }
                         .buttonStyle(.borderedProminent)
                         .disabled(!model.isCodexAvailable)
-                    Button("เปิด Codex") { model.openCodex() }
-                    Button("ตรวจสอบอีกครั้ง") { model.refreshAccount() }
+                    Button("Open Codex") { model.openCodex() }
+                    Button("Check Again") { model.refreshAccount() }
                 }
                 if let message = model.loginError ?? model.account.message {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Section("ความเป็นส่วนตัว") {
-                Label("แอปอ่านเฉพาะสถานะบัญชี และไม่อ่านหรือเก็บ token, API key หรือรหัสผ่าน", systemImage: "lock.shield")
+            Section("Privacy") {
+                Label("The app only reads account status. It never reads or stores tokens, API keys, or passwords.", systemImage: "lock.shield")
                     .font(.caption)
             }
         }
@@ -53,17 +53,17 @@ struct SettingsView: View {
     private var displayView: some View {
         Form {
             Section("Menu Bar") {
-                Picker("รูปแบบ", selection: $model.preferences.displayMode) {
-                    Text("ไอคอน + เปอร์เซ็นต์").tag(MenuDisplayMode.iconAndPercentage)
-                    Text("เปอร์เซ็นต์อย่างเดียว").tag(MenuDisplayMode.percentageOnly)
-                    Text("ไอคอนอย่างเดียว").tag(MenuDisplayMode.iconOnly)
+                Picker("Format", selection: $model.preferences.displayMode) {
+                    Text("Icon + percentages").tag(MenuDisplayMode.iconAndPercentage)
+                    Text("Percentages only").tag(MenuDisplayMode.percentageOnly)
+                    Text("Icon only").tag(MenuDisplayMode.iconOnly)
                 }
-                Toggle("ใช้สีตามโควตา", isOn: $model.preferences.useQuotaColors)
-                Toggle("แสดงสถานะการทำงาน", isOn: $model.preferences.showActivity)
+                Toggle("Color by quota level", isOn: $model.preferences.useQuotaColors)
+                Toggle("Show task status", isOn: $model.preferences.showActivity)
             }
-            Section("ระดับแจ้งเตือน") {
+            Section("Warning Level") {
                 HStack {
-                    Text("เปลี่ยนเป็นสีแดงเมื่อเหลือต่ำกว่า")
+                    Text("Turn red below")
                     Slider(value: $model.preferences.criticalThreshold, in: 5...40, step: 5)
                     Text("\(Int(model.preferences.criticalThreshold))%")
                         .monospacedDigit().frame(width: 38)
@@ -75,24 +75,24 @@ struct SettingsView: View {
 
     private var generalView: some View {
         Form {
-            Section("การทำงาน") {
-                Toggle("เปิด Codex Status เมื่อเข้าสู่ระบบ macOS", isOn: Binding(
+            Section("Behavior") {
+                Toggle("Open Codex Status at macOS login", isOn: Binding(
                     get: { model.preferences.launchAtLogin },
                     set: { model.setLaunchAtLogin($0) }
                 ))
                 if let error = model.launchAtLoginError {
                     Text(error).font(.caption).foregroundStyle(.red)
                 }
-                Picker("รีเฟรชทุก", selection: $model.preferences.refreshInterval) {
-                    Text("15 วินาที").tag(TimeInterval(15))
-                    Text("30 วินาที").tag(TimeInterval(30))
-                    Text("60 วินาที").tag(TimeInterval(60))
+                Picker("Refresh every", selection: $model.preferences.refreshInterval) {
+                    Text("15 seconds").tag(TimeInterval(15))
+                    Text("30 seconds").tag(TimeInterval(30))
+                    Text("60 seconds").tag(TimeInterval(60))
                 }
             }
-            Section("ข้อมูล") {
+            Section("Data") {
                 LabeledContent("Codex sessions", value: "~/.codex/sessions")
-                LabeledContent("เวอร์ชัน", value: appVersion)
-                Button("ตรวจสอบข้อมูลตอนนี้") {
+                LabeledContent("Version", value: appVersion)
+                Button("Check Data Now") {
                     refreshData()
                     model.refreshAccount()
                 }
@@ -103,10 +103,10 @@ struct SettingsView: View {
 
     private var accountLabel: String {
         switch model.account.state {
-        case .checking: "กำลังตรวจสอบ"
-        case .signedIn: "เข้าสู่ระบบแล้ว"
-        case .signedOut: "ยังไม่ได้เข้าสู่ระบบ"
-        case .unavailable: "ตรวจสอบไม่ได้"
+        case .checking: "Checking"
+        case .signedIn: "Signed In"
+        case .signedOut: "Signed Out"
+        case .unavailable: "Unavailable"
         }
     }
 

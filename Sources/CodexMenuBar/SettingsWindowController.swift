@@ -20,7 +20,7 @@ final class SettingsWindowController {
         }
         let controller = NSHostingController(rootView: SettingsView(model: model, refreshData: refreshData))
         let window = NSWindow(contentViewController: controller)
-        window.title = "ตั้งค่า Codex Status"
+        window.title = "Codex Status Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.setContentSize(NSSize(width: 520, height: 390))
         window.center()

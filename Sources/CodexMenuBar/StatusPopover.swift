@@ -31,7 +31,7 @@ struct StatusPopover: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Codex Status")
                     .font(.title3.bold())
-                Text(store.snapshot.quota?.limitName ?? "โควตาในเครื่อง")
+                Text(store.snapshot.quota?.limitName ?? "Local quota")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -45,7 +45,7 @@ struct StatusPopover: View {
     private var quotaSection: some View {
         if let quota = store.snapshot.quota, let remaining = quota.remainingPercent {
             VStack(alignment: .leading, spacing: 10) {
-                Label("โควตาคงเหลือ", systemImage: "gauge.with.dots.needle.67percent")
+                Label("Quota remaining", systemImage: "gauge.with.dots.needle.67percent")
                     .font(.headline)
                 ProgressView(value: remaining, total: 100)
                     .tint(toneColor(quota.tone))
@@ -54,10 +54,10 @@ struct StatusPopover: View {
                         Text(window.name)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 1) {
-                            Text("\(Int(window.remainingPercent.rounded()))% เหลือ")
+                            Text("\(Int(window.remainingPercent.rounded()))% remaining")
                                 .monospacedDigit()
                             if let reset = window.resetsAt {
-                                Text("รีเซ็ต \(reset.formatted(date: .abbreviated, time: .shortened))")
+                                Text("Resets \(reset.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -67,7 +67,7 @@ struct StatusPopover: View {
                 }
             }
         } else {
-            Label("ยังไม่มีข้อมูลโควตาที่ตรวจสอบได้", systemImage: "questionmark.circle")
+            Label("No verified quota data yet", systemImage: "questionmark.circle")
                 .foregroundStyle(.secondary)
         }
     }
@@ -78,7 +78,7 @@ struct StatusPopover: View {
                 .fill(activityColor(store.snapshot.activity.state))
                 .frame(width: 10, height: 10)
             VStack(alignment: .leading, spacing: 2) {
-                Text("สถานะการทำงาน")
+                Text("Task status")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(StatusPresentation.activityLabel(store.snapshot.activity.state))
@@ -102,14 +102,14 @@ struct StatusPopover: View {
     }
 
     private var staleBanner: some View {
-        Label("ข้อมูลอาจล้าสมัย", systemImage: "clock.badge.exclamationmark")
+        Label("Data may be stale", systemImage: "clock.badge.exclamationmark")
             .font(.caption)
             .foregroundStyle(.orange)
     }
 
     private var footer: some View {
         HStack {
-            Text("อัปเดต \(store.snapshot.loadedAt.formatted(date: .omitted, time: .standard))")
+            Text("Updated \(store.snapshot.loadedAt.formatted(date: .omitted, time: .standard))")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -119,29 +119,29 @@ struct StatusPopover: View {
                 if store.isRefreshing {
                     ProgressView().controlSize(.small)
                 } else {
-                    Label("รีเฟรช", systemImage: "arrow.clockwise")
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
             .disabled(store.isRefreshing)
-            Button("ออก") { NSApplication.shared.terminate(nil) }
+            Button("Quit") { NSApplication.shared.terminate(nil) }
             Button {
                 openSettings()
             } label: {
                 Image(systemName: "gearshape")
             }
-            .help("เปิดการตั้งค่า")
+            .help("Open Settings")
         }
     }
 
     private var accountSection: some View {
         HStack {
             Label(
-                settings.account.state == .signedIn ? "เข้าสู่ระบบ Codex แล้ว" : "ยังไม่ได้เข้าสู่ระบบ Codex",
+                settings.account.state == .signedIn ? "Signed in to Codex" : "Not signed in to Codex",
                 systemImage: settings.account.state == .signedIn ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark"
             )
             .font(.caption)
             Spacer()
-            Button("ตั้งค่า") { openSettings() }
+            Button("Settings") { openSettings() }
                 .buttonStyle(.link)
         }
     }

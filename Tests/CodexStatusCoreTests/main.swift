@@ -36,10 +36,10 @@ enum CodexStatusTests {
         tests.expect(QuotaTone.forRemaining(nil) == .unknown, "nil is unknown")
         tests.expect(StatusPresentation.capsuleText(remainingPercent: nil) == "Codex —", "unknown quota uses dash")
         tests.expect(StatusPresentation.capsuleText(remainingPercent: 72.4) == "Codex 72%", "capsule rounds quota")
-        tests.expect(StatusPresentation.activityLabel(.idle) == "ว่าง", "idle Thai label")
-        tests.expect(StatusPresentation.activityLabel(.working) == "กำลังทำงาน", "working Thai label")
-        tests.expect(StatusPresentation.activityLabel(.completed) == "เสร็จ", "completed Thai label")
-        tests.expect(StatusPresentation.activityLabel(.failed) == "เกิดข้อผิดพลาด", "failed Thai label")
+        tests.expect(StatusPresentation.activityLabel(.idle) == "Idle", "idle English label")
+        tests.expect(StatusPresentation.activityLabel(.working) == "Working", "working English label")
+        tests.expect(StatusPresentation.activityLabel(.completed) == "Completed", "completed English label")
+        tests.expect(StatusPresentation.activityLabel(.failed) == "Error", "failed English label")
 
         let accountProvider = CodexAccountProvider(authFile: URL(fileURLWithPath: "/tmp/unused-auth.json"))
         let signedInAccount = accountProvider.parse(#"{"auth_mode":"chatgpt","last_refresh":"2026-07-12T10:00:00Z","tokens":{"access_token":"SECRET_VALUE"}}"#)
@@ -57,8 +57,8 @@ enum CodexStatusTests {
         tests.expect(StatusPresentation.compactText(mode: .iconAndPercentage, remainingPercent: 72) == "C 72%", "icon and percentage mode")
         tests.expect(StatusPresentation.compactText(mode: .percentageOnly, remainingPercent: 72) == "72%", "percentage only mode")
         tests.expect(StatusPresentation.compactText(mode: .iconOnly, remainingPercent: 72) == "C", "icon only mode")
-        let fiveHourWindow = QuotaWindow(name: "5 ชั่วโมง", remainingPercent: 73, windowMinutes: 300, resetsAt: nil)
-        let weeklyWindow = QuotaWindow(name: "7 วัน", remainingPercent: 70, windowMinutes: 10_080, resetsAt: nil)
+        let fiveHourWindow = QuotaWindow(name: "5 hours", remainingPercent: 73, windowMinutes: 300, resetsAt: nil)
+        let weeklyWindow = QuotaWindow(name: "7 days", remainingPercent: 70, windowMinutes: 10_080, resetsAt: nil)
         tests.expect(
             StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [fiveHourWindow, weeklyWindow]) == "5H 73% · 7D 70%",
             "menu bar shows five-hour and weekly quota"

@@ -8,10 +8,10 @@ public enum StatusPresentation {
 
     public static func activityLabel(_ state: ActivityState) -> String {
         switch state {
-        case .idle: "ว่าง"
-        case .working: "กำลังทำงาน"
-        case .completed: "เสร็จ"
-        case .failed: "เกิดข้อผิดพลาด"
+        case .idle: "Idle"
+        case .working: "Working"
+        case .completed: "Completed"
+        case .failed: "Error"
         }
     }
 

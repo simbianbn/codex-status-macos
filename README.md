@@ -1,48 +1,82 @@
 # Codex Status for macOS
 
-แอป Menu Bar ขนาดเล็กสำหรับแสดงโควตา Codex จริงที่พบใน session metadata และสถานะงานล่าสุดบนเครื่อง
+Codex Status is a lightweight macOS menu bar utility that shows your real Codex quota windows and current task activity using local session metadata.
 
-## Build และเปิดใช้งาน
+![Codex Status icon](assets/AppIcon-master.png)
 
-ต้องใช้ macOS 13 ขึ้นไปและ Swift 6:
+## Features
+
+- Shows both quota windows at a glance: `5H 68% · 7D 69%`
+- Color-coded healthy, warning, critical, and unavailable states
+- Displays Idle, Working, Completed, and Error task states
+- Detailed popover with reset times and account status
+- Native Settings window for display, refresh, and login options
+- Uses the official Codex sign-in flow
+- Reads local metadata only and never exports prompts, responses, tokens, API keys, or passwords
+- Notch-safe menu bar capsule on modern Mac displays
+
+## Requirements
+
+- macOS 13 or later
+- Swift 6 toolchain
+- Codex or the ChatGPT desktop app installed for account sign-in
+
+## Build and Run
+
+Build the signed local app bundle:
 
 ```bash
 ./scripts/build-app.sh
 open "dist/Codex Status.app"
 ```
 
-สำหรับ build และเปิดใหม่โดยปิด instance เก่าก่อนเสมอ:
+Build, stop any previous instance, launch, and verify exactly one process:
 
 ```bash
 ./script/build_and_run.sh --verify
 ```
 
-แอปจะปรากฏเป็นแคปซูล `Codex 72%` บน Menu Bar คลิกเพื่อดูโควตาแต่ละรอบ เวลารีเซ็ต สถานะงาน และเวลาอัปเดตล่าสุด
+## Settings
 
-บน Mac ที่มี notch แอปใช้แคปซูลระดับ Menu Bar ในพื้นที่ปลอดภัยด้านขวาของ notch เพื่อไม่ให้ macOS ซ่อนไอคอนไว้ใต้กล้องหรือซ้อนกับไอคอนระบบ
+Open Settings from the gear button in the popover. Available options include:
 
-คลิก `ตั้งค่า` หรือไอคอนเฟืองเพื่อเปิดหน้าต่าง Settings สำหรับบัญชี Codex, รูปแบบ Menu Bar, สีแจ้งเตือน, รอบรีเฟรช และการเปิดพร้อม macOS ปุ่ม `เข้าสู่ระบบด้วย Codex` ใช้ flow ของ Codex ทางการและแอปไม่อ่านหรือจัดเก็บ token
+- Menu bar format: icon and percentages, percentages only, or icon only
+- Quota colors and critical threshold
+- Task status indicator
+- Refresh interval: 15, 30, or 60 seconds
+- Launch at macOS login
+- Codex account status and official sign-in
 
-## ความหมายของสี
+## Colors
 
-- เขียว: เหลือมากกว่า 50%
-- เหลือง: เหลือ 20–50%
-- แดง: เหลือน้อยกว่า 20%
-- เทาและ `—`: ไม่พบเปอร์เซ็นต์ที่ตรวจสอบได้
+- Green: more than 50% remaining
+- Yellow: 20–50% remaining
+- Red: below the configured critical threshold
+- Gray and `—`: no verified quota data is available
 
-จุดสถานะเป็นสีเทาเมื่อว่าง สีฟ้าเมื่อกำลังทำงาน สีเขียวเมื่องานเสร็จ และสีแดงเมื่อเกิดข้อผิดพลาด
+## Data and Privacy
 
-## แหล่งข้อมูลและความเป็นส่วนตัว
+The app reads only these local event metadata types from `~/.codex/sessions/**/*.jsonl`:
 
-แอปอ่านเฉพาะ event metadata ชนิด `token_count`, `task_started`, `task_complete`, `task_failed`, `turn_aborted` และ `error` จาก `~/.codex/sessions/**/*.jsonl` แบบ read-only ไม่อ่านหรือแสดง prompt/response, API key หรือ credential และไม่ส่งข้อมูลออกจากเครื่อง
+- `token_count`
+- `task_started`
+- `task_complete`
+- `task_failed`
+- `turn_aborted`
+- `error`
 
-โควตาที่แสดงคือค่าคงเหลือของหน้าต่างที่ถูกจำกัดมากที่สุด โดยคำนวณจาก `100 - used_percent` หาก Codex เปลี่ยน schema หรือยังไม่สร้าง usage event แอปจะแสดง `Codex —` แทนการประมาณค่า
+Quota remaining is calculated as `100 - used_percent`. The app does not display, log, or transmit prompt content, response content, access tokens, API keys, or credentials.
 
-## ตรวจสอบ
+## Verification
 
 ```bash
 swift run CodexStatusTests
 swift build
 ./scripts/build-app.sh
 ./scripts/test-launch.sh
+./scripts/test-menubar-overlay.sh
 ```
+
+## License
+
+MIT

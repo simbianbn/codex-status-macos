@@ -6,7 +6,7 @@ import Foundation
 final class StatusStore: ObservableObject {
     @Published private(set) var snapshot = CodexSnapshot.unavailable(
         now: Date(),
-        message: "กำลังอ่านข้อมูล Codex…"
+        message: "Reading Codex data…"
     )
     @Published private(set) var isRefreshing = false
 

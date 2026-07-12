@@ -19,7 +19,7 @@ public struct CodexStatusRepository: Sendable {
     public func loadSnapshot(now: Date = Date()) async -> CodexSnapshot {
         let files = newestSessionFiles()
         guard !files.isEmpty else {
-            return .unavailable(now: now, message: "ไม่พบไฟล์ session ใน ~/.codex/sessions")
+            return .unavailable(now: now, message: "No session files were found in ~/.codex/sessions.")
         }
 
         var selectedQuota: (value: QuotaSnapshot, source: String)?
@@ -43,7 +43,7 @@ public struct CodexStatusRepository: Sendable {
             activity: selectedActivity,
             loadedAt: now,
             sourcePath: selectedQuota?.source,
-            errorMessage: selectedQuota == nil ? "ไม่พบข้อมูลโควตา Codex ที่ตรวจสอบได้" : nil,
+            errorMessage: selectedQuota == nil ? "No verified Codex quota data was found." : nil,
             isStale: stale
         )
     }
