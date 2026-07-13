@@ -140,6 +140,32 @@ enum CodexStatusTests {
             tests.expect(false, "repository fixture setup: \(error)")
         }
 
+        do {
+            let monitoredFile = FileManager.default.temporaryDirectory
+                .appendingPathComponent("codex-status-monitor-\(UUID().uuidString).jsonl")
+            try Data().write(to: monitoredFile)
+            let monitorSignal = DispatchSemaphore(value: 0)
+            let monitor = SessionFileMonitor()
+            tests.expect(
+                monitor.watch(fileURL: monitoredFile) {
+                    monitorSignal.signal()
+                },
+                "session monitor starts for a readable file"
+            )
+            let handle = try FileHandle(forWritingTo: monitoredFile)
+            try handle.seekToEnd()
+            try handle.write(contentsOf: Data("updated\n".utf8))
+            try handle.close()
+            tests.expect(
+                monitorSignal.wait(timeout: .now() + 2) == .success,
+                "session monitor detects appended Codex events"
+            )
+            monitor.stop()
+            try? FileManager.default.removeItem(at: monitoredFile)
+        } catch {
+            tests.expect(false, "session monitor fixture setup: \(error)")
+        }
+
         tests.finish()
     }
 
