@@ -24,17 +24,42 @@ public enum StatusPresentation {
         }
     }
 
-    public static func menuBarQuotaText(mode: MenuDisplayMode, windows: [QuotaWindow]) -> String {
+    public static func menuBarQuotaText(mode: MenuDisplayMode, windows: [QuotaWindow], now: Date) -> String {
         if mode == .iconOnly { return "C" }
         let ordered = windows.sorted { ($0.windowMinutes ?? .max) < ($1.windowMinutes ?? .max) }
-        let fiveHour = ordered.first { $0.windowMinutes == 300 }
-        let weekly = ordered.first { $0.windowMinutes == 10_080 }
-        guard let fiveHour, let weekly else {
-            return compactText(mode: mode, remainingPercent: ordered.map(\.remainingPercent).min())
+        guard !ordered.isEmpty else {
+            return compactText(mode: mode, remainingPercent: nil)
         }
-        let values = "\(Int(fiveHour.remainingPercent.rounded()))% · \(Int(weekly.remainingPercent.rounded()))%"
-        return mode == .iconAndPercentage
-            ? "5H \(Int(fiveHour.remainingPercent.rounded()))% · 7D \(Int(weekly.remainingPercent.rounded()))%"
-            : values
+        if ordered.count == 1, let window = ordered.first {
+            let percentage = "\(Int(window.remainingPercent.rounded()))%"
+            guard mode == .iconAndPercentage else { return percentage }
+            guard let resetsAt = window.resetsAt else { return "Codex: \(percentage)" }
+            return "Codex: \(percentage) (\(resetCountdown(until: resetsAt, now: now)))"
+        }
+        return ordered.map { window in
+            let percentage = "\(Int(window.remainingPercent.rounded()))%"
+            guard mode == .iconAndPercentage else { return percentage }
+            return "\(windowAbbreviation(minutes: window.windowMinutes)) \(percentage)"
+        }.joined(separator: " · ")
+    }
+
+    private static func windowAbbreviation(minutes: Int?) -> String {
+        guard let minutes else { return "C" }
+        if minutes.isMultiple(of: 1_440) { return "\(minutes / 1_440)D" }
+        if minutes.isMultiple(of: 60) { return "\(minutes / 60)H" }
+        return "\(minutes)M"
+    }
+
+    private static func resetCountdown(until reset: Date, now: Date) -> String {
+        let remaining = Int(reset.timeIntervalSince(now))
+        guard remaining > 0 else { return "resetting" }
+
+        let days = remaining / 86_400
+        let hours = remaining % 86_400 / 3_600
+        if days > 0 { return "\(days)d \(hours)h" }
+
+        let minutes = remaining % 3_600 / 60
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        return "\(minutes)m"
     }
 }

@@ -26,8 +26,8 @@ public struct CodexSessionParser: Sendable {
             }
 
             let windows = [
-                Self.makeWindow(name: "5 hours", value: limits.primary),
-                Self.makeWindow(name: "7 days", value: limits.secondary)
+                Self.makeWindow(value: limits.primary),
+                Self.makeWindow(value: limits.secondary)
             ].compactMap { $0 }
 
             guard !windows.isEmpty else { continue }
@@ -50,16 +50,33 @@ public struct CodexSessionParser: Sendable {
         return CodexSnapshot(quota: quota, activity: activity, loadedAt: now)
     }
 
-    private static func makeWindow(name: String, value: LimitWindow?) -> QuotaWindow? {
-        guard let used = value?.usedPercent, used.isFinite else { return nil }
+    private static func makeWindow(value: LimitWindow?) -> QuotaWindow? {
+        guard
+            let value,
+            let used = value.usedPercent,
+            used.isFinite
+        else { return nil }
         let remaining = min(100, max(0, 100 - used))
-        let reset = value?.resetsAt.map { Date(timeIntervalSince1970: $0) }
+        let reset = value.resetsAt.map { Date(timeIntervalSince1970: $0) }
         return QuotaWindow(
-            name: name,
+            name: windowName(minutes: value.windowMinutes),
             remainingPercent: remaining,
-            windowMinutes: value?.windowMinutes,
+            windowMinutes: value.windowMinutes,
             resetsAt: reset
         )
+    }
+
+    private static func windowName(minutes: Int?) -> String {
+        guard let minutes, minutes > 0 else { return "Quota" }
+        if minutes.isMultiple(of: 1_440) {
+            let days = minutes / 1_440
+            return "\(days) day\(days == 1 ? "" : "s")"
+        }
+        if minutes.isMultiple(of: 60) {
+            let hours = minutes / 60
+            return "\(hours) hour\(hours == 1 ? "" : "s")"
+        }
+        return "\(minutes) minutes"
     }
 
     private static func parseDate(_ value: String?) -> Date? {

@@ -1,6 +1,6 @@
 # Codex Quota Countdown and Menu Bar Logo Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Display a single Codex quota as `Codex: 99% (5d 4h)` and add a compact vector Codex Status logo to the menu bar capsule.
 
@@ -28,17 +28,17 @@
 - Consumes: `QuotaWindow.remainingPercent`, `QuotaWindow.resetsAt`, `CodexSnapshot.loadedAt`
 - Produces: `StatusPresentation.menuBarQuotaText(mode:windows:now:) -> String`
 
-- [ ] **Step 1: Add failing checks for countdown output**
+- [x] **Step 1: Add failing checks for countdown output**
 
 Add checks covering `5d 4h`, `4h 30m`, `30m`, `resetting`, and missing reset time. Use fixed `Date` values and assert the single weekly window produces `Codex: 99% (5d 4h)`.
 
-- [ ] **Step 2: Run the checks and confirm failure**
+- [x] **Step 2: Run the checks and confirm failure**
 
 Run: `swift run CodexStatusTests`
 
 Expected: the new countdown checks fail because the formatter still produces `7D 99%` and has no `now` parameter.
 
-- [ ] **Step 3: Implement the minimal deterministic formatter**
+- [x] **Step 3: Implement the minimal deterministic formatter**
 
 Change the interface to:
 
@@ -52,7 +52,7 @@ public static func menuBarQuotaText(
 
 For a single window in `.iconAndPercentage`, return `Codex: <percent>%` followed by a reset countdown when `resetsAt` exists. Floor elapsed components so the menu text does not jump upward. Retain percentage-only and multi-window behavior.
 
-- [ ] **Step 4: Run the checks and confirm green**
+- [x] **Step 4: Run the checks and confirm green**
 
 Run: `swift run CodexStatusTests`
 
@@ -67,15 +67,15 @@ Expected: all checks pass, including the new countdown cases.
 - Consumes: capsule foreground color and `StatusPresentation.menuBarQuotaText(mode:windows:now:)`
 - Produces: a 14-point vector mark drawn before the activity dot and quota text
 
-- [ ] **Step 1: Update the capsule presentation call**
+- [x] **Step 1: Update the capsule presentation call**
 
 Pass `snapshot.loadedAt` as `now` so every refresh updates the countdown.
 
-- [ ] **Step 2: Add vector mark drawing**
+- [x] **Step 2: Add vector mark drawing**
 
 Reserve 18 points for the mark. Draw a 12-point circular ring with a compact `C` centered inside it using the same foreground color as the text. Keep the activity dot after the mark and adjust text origin and total image width.
 
-- [ ] **Step 3: Build and verify launch**
+- [x] **Step 3: Build and verify launch**
 
 Run: `./script/build_and_run.sh --verify`
 
@@ -89,19 +89,19 @@ Expected: production build succeeds and `Codex Status` is running.
 - Verify: `Sources/CodexMenuBar/CodexMenuBarApp.swift`
 - Verify: `Tests/CodexStatusCoreTests/main.swift`
 
-- [ ] **Step 1: Run the full executable test suite**
+- [x] **Step 1: Run the full executable test suite**
 
 Run: `swift run CodexStatusTests`
 
 Expected: every check passes with zero failures.
 
-- [ ] **Step 2: Verify the visible menu bar fallback surface**
+- [x] **Step 2: Verify the visible menu bar fallback surface**
 
 Run: `./scripts/test-menubar-overlay.sh`
 
 Expected: `PASS: visible capsule fallback window exists`.
 
-- [ ] **Step 3: Check the final diff**
+- [x] **Step 3: Check the final diff**
 
 Run: `git diff --check && git status -sb`
 

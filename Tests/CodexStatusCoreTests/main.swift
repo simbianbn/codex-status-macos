@@ -19,6 +19,12 @@ enum CodexStatusTests {
         let fractionalResult = parser.parse(lines: [fractionalTimestamp], now: now)
         tests.expect(fractionalResult.quota?.remainingPercent == 70, "parses Codex timestamps with fractional seconds")
 
+        let weeklyOnly = #"{"timestamp":"2026-07-13T02:23:47.246Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"limit_id":"codex","primary":{"used_percent":1,"window_minutes":10080,"resets_at":1784512316},"secondary":null,"plan_type":"pro"}}}"#
+        let weeklyOnlyResult = parser.parse(lines: [weeklyOnly], now: now)
+        tests.expect(weeklyOnlyResult.quota?.windows.count == 1, "accepts a single quota window")
+        tests.expect(weeklyOnlyResult.quota?.windows.first?.name == "7 days", "names quota windows from window duration")
+        tests.expect(weeklyOnlyResult.quota?.windows.first?.remainingPercent == 99, "reads the weekly-only remaining quota")
+
         let older = quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 70)
         let newer = quotaLine(timestamp: "2026-07-12T10:01:00Z", primaryUsed: 20)
         tests.expect(parser.parse(lines: [older, newer], now: now).quota?.remainingPercent == 80, "latest quota event wins")
@@ -60,12 +66,42 @@ enum CodexStatusTests {
         let fiveHourWindow = QuotaWindow(name: "5 hours", remainingPercent: 73, windowMinutes: 300, resetsAt: nil)
         let weeklyWindow = QuotaWindow(name: "7 days", remainingPercent: 70, windowMinutes: 10_080, resetsAt: nil)
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [fiveHourWindow, weeklyWindow]) == "5H 73% · 7D 70%",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [fiveHourWindow, weeklyWindow], now: now) == "5H 73% · 7D 70%",
             "menu bar shows five-hour and weekly quota"
         )
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .percentageOnly, windows: [fiveHourWindow, weeklyWindow]) == "73% · 70%",
+            StatusPresentation.menuBarQuotaText(mode: .percentageOnly, windows: [fiveHourWindow, weeklyWindow], now: now) == "73% · 70%",
             "percentage-only mode keeps both quota windows"
+        )
+
+        let countdownNow = Date(timeIntervalSince1970: 1_000_000)
+        let countdownWindow = { (seconds: TimeInterval?) in
+            QuotaWindow(
+                name: "7 days",
+                remainingPercent: 99,
+                windowMinutes: 10_080,
+                resetsAt: seconds.map { countdownNow.addingTimeInterval($0) }
+            )
+        }
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(5 * 86_400 + 4 * 3_600)], now: countdownNow) == "Codex: 99% (5d 4h)",
+            "single quota shows a day and hour reset countdown"
+        )
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(4 * 3_600 + 30 * 60)], now: countdownNow) == "Codex: 99% (4h 30m)",
+            "short quota countdown shows hours and minutes"
+        )
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(30 * 60)], now: countdownNow) == "Codex: 99% (30m)",
+            "sub-hour quota countdown shows minutes"
+        )
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(-1)], now: countdownNow) == "Codex: 99% (resetting)",
+            "expired quota countdown shows resetting"
+        )
+        tests.expect(
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(nil)], now: countdownNow) == "Codex: 99%",
+            "single quota without reset time omits countdown"
         )
 
         let started = parser.parse(lines: [event("task_started", at: "2026-07-12T10:00:00Z")], now: now)
