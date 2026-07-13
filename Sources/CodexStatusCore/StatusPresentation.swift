@@ -33,8 +33,8 @@ public enum StatusPresentation {
         if ordered.count == 1, let window = ordered.first {
             let percentage = "\(Int(window.remainingPercent.rounded()))%"
             guard mode == .iconAndPercentage else { return percentage }
-            guard let resetsAt = window.resetsAt else { return "Codex: \(percentage)" }
-            return "Codex: \(percentage) (\(resetCountdown(until: resetsAt, now: now)))"
+            guard let resetsAt = window.resetsAt else { return percentage }
+            return "\(percentage) (\(resetCountdown(until: resetsAt, now: now)))"
         }
         return ordered.map { window in
             let percentage = "\(Int(window.remainingPercent.rounded()))%"

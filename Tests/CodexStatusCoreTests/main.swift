@@ -84,23 +84,23 @@ enum CodexStatusTests {
             )
         }
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(5 * 86_400 + 4 * 3_600)], now: countdownNow) == "Codex: 99% (5d 4h)",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(5 * 86_400 + 4 * 3_600)], now: countdownNow) == "99% (5d 4h)",
             "single quota shows a day and hour reset countdown"
         )
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(4 * 3_600 + 30 * 60)], now: countdownNow) == "Codex: 99% (4h 30m)",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(4 * 3_600 + 30 * 60)], now: countdownNow) == "99% (4h 30m)",
             "short quota countdown shows hours and minutes"
         )
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(30 * 60)], now: countdownNow) == "Codex: 99% (30m)",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(30 * 60)], now: countdownNow) == "99% (30m)",
             "sub-hour quota countdown shows minutes"
         )
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(-1)], now: countdownNow) == "Codex: 99% (resetting)",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(-1)], now: countdownNow) == "99% (resetting)",
             "expired quota countdown shows resetting"
         )
         tests.expect(
-            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(nil)], now: countdownNow) == "Codex: 99%",
+            StatusPresentation.menuBarQuotaText(mode: .iconAndPercentage, windows: [countdownWindow(nil)], now: countdownNow) == "99%",
             "single quota without reset time omits countdown"
         )
 
