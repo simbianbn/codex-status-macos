@@ -33,6 +33,12 @@ public struct QuotaSnapshot: Equatable, Sendable {
     public let windows: [QuotaWindow]
     public let observedAt: Date
 
+    public init(limitName: String?, windows: [QuotaWindow], observedAt: Date) {
+        self.limitName = limitName
+        self.windows = windows
+        self.observedAt = observedAt
+    }
+
     public var remainingPercent: Double? {
         windows.map(\.remainingPercent).min()
     }

@@ -4,24 +4,23 @@ public struct CodexStatusRepository: Sendable {
     public let sessionsRoot: URL
     private let parser: CodexSessionParser
     private let maximumFiles: Int
+    private let rateLimitsProvider: any CodexRateLimitsProviding
 
     public init(
         sessionsRoot: URL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".codex/sessions", isDirectory: true),
         maximumFiles: Int = 12,
-        parser: CodexSessionParser = CodexSessionParser()
+        parser: CodexSessionParser = CodexSessionParser(),
+        rateLimitsProvider: any CodexRateLimitsProviding = CodexAppServerRateLimitsProvider()
     ) {
         self.sessionsRoot = sessionsRoot
         self.maximumFiles = maximumFiles
         self.parser = parser
+        self.rateLimitsProvider = rateLimitsProvider
     }
 
     public func loadSnapshot(now: Date = Date()) async -> CodexSnapshot {
         let files = newestSessionFiles()
-        guard !files.isEmpty else {
-            return .unavailable(now: now, message: "No session files were found in ~/.codex/sessions.")
-        }
-
         var selectedQuota: (value: QuotaSnapshot, source: String)?
         var selectedActivity = TaskActivity()
         for file in files {
@@ -37,12 +36,16 @@ public struct CodexStatusRepository: Sendable {
             }
         }
 
+        if let liveQuota = await rateLimitsProvider.loadQuota(now: now) {
+            selectedQuota = (liveQuota, selectedQuota?.source ?? "")
+        }
+
         let stale = selectedQuota.map { now.timeIntervalSince($0.value.observedAt) > 900 } ?? false
         return CodexSnapshot(
             quota: selectedQuota?.value,
             activity: selectedActivity,
             loadedAt: now,
-            sourcePath: selectedQuota?.source,
+            sourcePath: selectedQuota?.source.isEmpty == false ? selectedQuota?.source : nil,
             errorMessage: selectedQuota == nil ? "No verified Codex quota data was found." : nil,
             isStale: stale
         )

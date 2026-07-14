@@ -25,6 +25,12 @@ enum CodexStatusTests {
         tests.expect(weeklyOnlyResult.quota?.windows.first?.name == "7 days", "names quota windows from window duration")
         tests.expect(weeklyOnlyResult.quota?.windows.first?.remainingPercent == 99, "reads the weekly-only remaining quota")
 
+        let liveRateLimits = #"{"id":2,"result":{"rateLimits":{"limitId":"codex","limitName":null,"primary":{"usedPercent":27,"windowDurationMins":10080,"resetsAt":1784512316},"secondary":null,"planType":"pro"},"rateLimitsByLimitId":{"codex_bengalfox":{"limitId":"codex_bengalfox","limitName":"GPT-5.3-Codex-Spark","primary":{"usedPercent":0,"windowDurationMins":10080,"resetsAt":1784629579},"secondary":null,"planType":"pro"},"codex":{"limitId":"codex","limitName":null,"primary":{"usedPercent":27,"windowDurationMins":10080,"resetsAt":1784512316},"secondary":null,"planType":"pro"}}}}"#
+        let liveQuota = CodexRateLimitsParser().parse(lines: [liveRateLimits], now: now)
+        tests.expect(liveQuota?.remainingPercent == 73, "reads remaining quota from the live Codex rate-limit response")
+        tests.expect(liveQuota?.windows.first?.windowMinutes == 10_080, "preserves the live quota window duration")
+        tests.expect(liveQuota?.windows.first?.resetsAt == Date(timeIntervalSince1970: 1_784_512_316), "preserves the live quota reset time")
+
         let older = quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 70)
         let newer = quotaLine(timestamp: "2026-07-12T10:01:00Z", primaryUsed: 20)
         tests.expect(parser.parse(lines: [older, newer], now: now).quota?.remainingPercent == 80, "latest quota event wins")
@@ -129,7 +135,10 @@ enum CodexStatusTests {
             try quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 30).write(to: newerFile, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 100)], ofItemAtPath: olderFile.path)
             try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 200)], ofItemAtPath: newerFile.path)
-            let repository = CodexStatusRepository(sessionsRoot: root)
+            let repository = CodexStatusRepository(
+                sessionsRoot: root,
+                rateLimitsProvider: StaticRateLimitsProvider(quota: nil)
+            )
             let snapshot = await repository.loadSnapshot(now: now)
             tests.expect(snapshot.quota?.remainingPercent == 70, "repository reads newest session metadata")
             let expectedSource = newerFile.resolvingSymlinksInPath().path
@@ -138,6 +147,32 @@ enum CodexStatusTests {
             try? FileManager.default.removeItem(at: root)
         } catch {
             tests.expect(false, "repository fixture setup: \(error)")
+        }
+
+        do {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            let sessionFile = root.appendingPathComponent("session.jsonl")
+            try quotaLine(timestamp: "2026-07-12T10:00:00Z", primaryUsed: 20).write(
+                to: sessionFile,
+                atomically: true,
+                encoding: .utf8
+            )
+            let liveQuota = QuotaSnapshot(
+                limitName: "Codex",
+                windows: [QuotaWindow(name: "7 days", remainingPercent: 73, windowMinutes: 10_080, resetsAt: nil)],
+                observedAt: now
+            )
+            let repository = CodexStatusRepository(
+                sessionsRoot: root,
+                rateLimitsProvider: StaticRateLimitsProvider(quota: liveQuota)
+            )
+            let snapshot = await repository.loadSnapshot(now: now)
+            tests.expect(snapshot.quota?.remainingPercent == 73, "repository prefers the live Codex quota over stale session data")
+            tests.expect(snapshot.isStale == false, "live Codex quota is fresh")
+            try? FileManager.default.removeItem(at: root)
+        } catch {
+            tests.expect(false, "live repository fixture setup: \(error)")
         }
 
         do {
@@ -166,6 +201,14 @@ enum CodexStatusTests {
             tests.expect(false, "session monitor fixture setup: \(error)")
         }
 
+        if ProcessInfo.processInfo.environment["CODEX_LIVE_TEST"] == "1" {
+            let liveQuota = await CodexAppServerRateLimitsProvider().loadQuota(now: Date())
+            tests.expect(liveQuota != nil, "reads quota from the installed Codex app server")
+            if let remaining = liveQuota?.remainingPercent {
+                print("LIVE: Codex quota remaining \(Int(remaining.rounded()))%")
+            }
+        }
+
         tests.finish()
     }
 
@@ -175,6 +218,14 @@ enum CodexStatusTests {
 
     private static func event(_ type: String, at timestamp: String) -> String {
         #"{"timestamp":"\#(timestamp)","type":"event_msg","payload":{"type":"\#(type)"}}"#
+    }
+}
+
+private struct StaticRateLimitsProvider: CodexRateLimitsProviding {
+    let quota: QuotaSnapshot?
+
+    func loadQuota(now: Date) async -> QuotaSnapshot? {
+        quota
     }
 }
 
