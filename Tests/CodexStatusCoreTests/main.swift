@@ -201,6 +201,28 @@ enum CodexStatusTests {
             tests.expect(false, "session monitor fixture setup: \(error)")
         }
 
+        do {
+            let fixtureURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("slow-codex-app-server-\(UUID().uuidString).sh")
+            let delayedResponse = """
+            #!/bin/bash
+            while IFS= read -r line; do
+                [[ "$line" == *'"id":2'* ]] && break
+            done
+            sleep 1.3
+            perl -MIO::Select -e '$s = IO::Select->new(\\*STDIN); exit($s->can_read(0.2) ? 1 : 0)'
+            [[ $? -eq 1 ]] && exit 0
+            printf '%s\\n' '\(liveRateLimits)'
+            """
+            try delayedResponse.write(to: fixtureURL, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fixtureURL.path)
+            let delayedQuota = await CodexAppServerRateLimitsProvider(executableURL: fixtureURL).loadQuota(now: now)
+            tests.expect(delayedQuota?.remainingPercent == 73, "waits for a delayed Codex rate-limit response")
+            try? FileManager.default.removeItem(at: fixtureURL)
+        } catch {
+            tests.expect(false, "delayed app-server fixture setup: \(error)")
+        }
+
         if ProcessInfo.processInfo.environment["CODEX_LIVE_TEST"] == "1" {
             let liveQuota = await CodexAppServerRateLimitsProvider().loadQuota(now: Date())
             tests.expect(liveQuota != nil, "reads quota from the installed Codex app server")
